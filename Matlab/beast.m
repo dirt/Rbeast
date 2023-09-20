@@ -2,8 +2,9 @@ function out = beast(y, varargin)
 %  
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast' to see the following
-%   USAGE: out=<strong>beast(y, ...) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   USAGE: out=<strong>beast(y, ...) </strong>
 %
 %   <strong>y</strong>:  a regular time series; it should be a numeric vector. For ireggular 
 %   time series, use 'beast_irreg' or 'beast123' instead. For multiple time 
@@ -15,19 +16,25 @@ function out = beast(y, varargin)
 %   web(https://rdrr.io/cran/Rbeast/man/beast.html')">rdrr.io/cran/Rbeast/man/beast.html</a>. Unlike R, Matlab doesn't support keyword-style 
 %   arguments, so the beast parameters should be provided in the following forms:
 %
-%   <strong>beast(Nile, 'start', 1871, 'deltat', 1, 'season','none')</strong>
-%   <strong>beast(Yellowstone, 'start', [1981,7,7], 'tcp.minmax', [0,10], 'deltat', 1/24)</strong> 
+%   <strong>beast( Nile, 'start', 1871, 'deltat', 1, 'season','none' )</strong>
+%   <strong>beast( Yellowstone, 'start', [1981,7,7], 'tcp.minmax', [0,10], 'deltat', 1/24 )</strong> 
 %
-%   <strong>Possible Keywords</strong>:
+%   <strong>*Possible Keywords*</strong>:
 %      
 %   <strong>start</strong>: 
 %        the start time of the regular time series
 %   <strong>deltat</strong>: 
 %        the time interval between consecutive datapoints (e.g., 1/12
 %        for monthly time series if the time unit is year).
-%   <strong>freq</strong>:  
-%        the number of datapoints per period if peridodic  variations are 
-%        present in the data
+%   <strong>freq</strong>:  Deprecated. Replaced with 'period'. See below
+%   <strong>period</strong>:  
+%        a numeric value to specify the period if peridodic/seasonal variations 
+%        are present in the data. If period is given a zero, negative value or 'none' 
+%        it suggests no seasonal/periodic component in the signal. (season='none'
+%        also suggests no periodic component).
+%        Note: in earlier versions, 'freq' was used to specify the period and
+%        now deprecated in this version. The unit of 'period', if any
+%        should be consistent with the unit of 'deltat'..
 %   <strong>season</strong>: 
 %        a string specifier. Possible values - 'none':  trend-only data with no 
 %        seasonality; 'harmonic': the seasonal/peridoic  component modelled via 
@@ -51,16 +58,14 @@ function out = beast(y, varargin)
 %        polynomials used to model the trend
 %   <strong>tseg.min</strong>: 
 %        an integer; the min length of the segment for the trend component (i.e.,
-%        the min distance between neighorbing changepoints)
-%
+%        the min distance between neighorbing changepoints)%
 %   <strong>deseasonalize</strong>: 
 %        boolean; if true, the input time series will be first
 %        de-seasonalized before applying BEAST by removing a global seasonal 
 %        component
 %   <strong>detrend</strong>: 
 %        boolean; if true, the input time series will be first
-%        de-trend before applying BEAST by removing a global trend 
-%
+%        de-trend before applying BEAST by removing a global trend %
 %   <strong>mcmc.seed</strong>: 
 %        a seed for the random number generator; set it to a non-zero
 %        integer to reproduce the results among different runs
@@ -71,13 +76,16 @@ function out = beast(y, varargin)
 %   <strong>mcmc.burnin</strong>: 
 %        the number of initial samples of each chain to be discarded
 %   <strong>mcmc.chains</strong>: 
-%        the number of MCMC chains
-%
+%        the number of MCMC chains%
 %   <strong>print.progress</strong>: 
 %        boolean; if true, a progress bar is shown
 %   <strong>print.options</strong>: 
-%        boolean; if true, print the BEAST paramers. The keywords for beast() 
-%        are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
+%        boolean; if true, print the BEAST paramers. 
+%   <strong>gui</strong>: 
+%       boolean; if true, show a gui to demostrate the MCMC sampling; runs only 
+%       on Windows not Linux or MacOS
+%
+%   The keywords for beast() are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
 %        in the beast123() interface. Some examples are:
 %            deseasonalize <-> metadata.deseasonalize
 %            scp.minmax(1) <-> prior.seasonMinOrder
@@ -85,9 +93,9 @@ function out = beast(y, varargin)
 %            sseg.min      <-> prior.seasonMinSepDist
 %            mcmc.seed     <-> mcmc.seed
 %            tcp.minmax(1) <-> prior.trendMinKnotNumber
-%       <strong> Experts should use the the beast123 function.</strong>
+%   <strong>Experts should use the the beast123 function.</strong>
 %
-%   <strong>Result/Output</strong>: The output is a struct variable; example of the fields include
+%   <strong>*Result/Output*</strong>: The output is a struct variable; example of the fields include
 %
 %       marg_lik: marginal likilood; the larger, the better
 %       sig2    : variance  of error
@@ -116,28 +124,87 @@ function out = beast(y, varargin)
 %       season.ampSD   : standard ev of the estiamated amplitude
 %
 %   <strong>More help</strong>:  
-%      The terse doc sucks (I know); so far, the best details are still the
+%      This terse help doc sucks (I know); so far, the best details are still the
 %      R help doc, available at https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf.
-%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's beast(freq=1) 
-%      beast('freq',1).
+%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's 
+%      beast(Y,<strong>start</strong>=1987,<strong>freq</strong>=1) is beast(Y,<strong>'start'</strong>, 1987, <strong>'freq'</strong>,1).
 %      
 %   <strong>Examples</strong>:
-%       load('Nile.mat')             % Nile river annual streamflow: trend-only data
-%       o=beast(Nile, 'start', 1871, 'season','none') 
+%       % Nile river annual streamflow: trend-only data
+%       load('Nile.mat')              
+%       o = beast(Nile, 'start', 1871, 'season','none') 
 %       printbeast(o)
 %       plotbeast(o)
+%       
+%       % Explicitly specify deltat=1. BEAST knows nothing about the unit
+%       % of 1871 and 1.0 (i.e., 1871 years, 1871 seconds, or 1871 meters?) 
+%       o = beast(Nile, 'start', 1871, 'deltat', 1.0, 'season','none') 
 %
-%       load('googletrend.mat')   % Monthly google trend of the search word 'beach'
-%       o=beast(beach, 'start', [2004,1],'deltat', 1/12)
+%       % start is given a date 1871-1 (Year-Mon). The time unit is
+%       % then fractional/decimal year. delta=1.0 means 1.0 year
+%       o = beast(Nile, 'start', [1871,1], 'deltat', 1.0, 'season','none') 
+%
+%       % period=0 means a trend-only signal, which is equivalent to season='none'
+%       o = beast(Nile, 'start', 1871, 'deltat', 1, 'period', 0) 
+%
+%       % Use a string to specify a unit for deltat or period (e.g., deltat='1 year')
+%       % The time unit is also fractional year. 1871 means Year 1871
+%       o = beast(Nile, 'start', 1871, 'deltat', '1 year', 'period', 0) 
+%
+%       % Use a string to specify a unit for delta or period (e.g., deltat='12 mo')
+%       % The time unit is fractional year. 1871 means Year 1871
+%       o = beast(Nile, 'start', 1871, 'deltat', '12 mo', 'period', 0) 
+%
+%       % Do not print the options 
+%       o=beast(Nile, 'start', 1871, 'deltat',1.0,'season','none','print.options',false)
+%
+%       % Show a gui window to demostrate the BEAST sampling process in
+%       % real-time (for Windows only not Linux and MacOS)% 
+%       beast(Nile,'season','none', 'gui',true) 
+%
+%       %% Monthly google trend of the search word 'beach'
+%       load('googletrend.mat')   
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12) %deltat = 1/12 yr =1 month
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
 %
-%       load('co2.mat')             % Monthly air co2 data since 1959: deltaTime=1/12 year
-%       o=beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'freq',12)
+%       % delta  = 1/12: for dates, the default unit is year, so delta=1/12yr=1 month;       
+%       % period = 1.0 means 1 year
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12, 'period',1.0)  
+%
+%       % period='12 month': use a string to explicitly specify the unit              
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12, 'period','12 month')
+%       o = beast(beach, 'start', [2004,1],'deltat', '1 month', 'period','365 days')
+%
+%       %% Monthly air co2 data since 1959: deltaTime=1/12 year
+%       load('co2.mat')     
+%       o = beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'period',1.0)
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
+%
+%      %% Daily covid-19 infection statistics 
+%       load('covid19.mat')    
+%       Y    = sqrt(double(covid19.newcases));
+%       Date = covid19.datestr;
+%       % the min length of seasonal segments is set to 30 data points
+%       o    = beast(Y, 'start',[2020,01,22], 'deltat', 1/365, 'period', 7/365,'sseg.min',30)
+%       printbeast(o)
+%       plotbeast(o)
+%       plotbeast(o,'ncpStat','median')
+%
+%       % Use a string to specify delta with a unit
+%       o = beast(Y, 'start',[2020,01,22], 'deltat', '1.0 day',  'period', '7days','sseg.min',30)
+%
+%       % Convert and aggregate the daily data into a weekly time series (i.e., deltaT=7 days)
+%       % then fit a trend-only model with no periodic component
+%       o = beast(Y, 'time',Date, 'deltat', '7days',  'period', 'none')
+%       %o= beast(Y, 'time',Date, 'deltat', '7days',  'period', 0 ) % equivalent to period='none'
+%       plotbeast(o)
+%
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
 %
 %   See also beast123, beast_irreg, printbeast, plotbeast, extractbeast
 
@@ -160,11 +227,13 @@ function out = beast(y, varargin)
    % get values from keys. The last arg is the default value if the key is
    % missing from varagin/KeyList
   
-   start  = GetValueByKey(KeyList, ValList, 'start',  1);
-   deltat = GetValueByKey(KeyList, ValList, 'deltat',  1);
-   freq   = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   start  = GetValueByKey(KeyList, ValList, 'start',  []);
+   deltat = GetValueByKey(KeyList, ValList, 'deltat', []);
+   num_samples_per_period  = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   period   = GetValueByKey(KeyList, ValList, 'period',  []); 
+   time    = GetValueByKey(KeyList, ValList, 'time',  []); 
    
-   season          = GetValueByKey(KeyList, ValList, 'season','harmonic');
+   season          = GetValueByKey(KeyList, ValList, 'season',[]); %'harmonic'
    sorder_minmax   = GetValueByKey(KeyList, ValList, 'sorder.minmax', [1,5]); 
    scp_minmax      = GetValueByKey(KeyList, ValList, 'scp.minmax',    [0,10]); 
    sseg_min        = GetValueByKey(KeyList, ValList, 'sseg.min',      []); 
@@ -174,7 +243,10 @@ function out = beast(y, varargin)
    
    torder_minmax   = GetValueByKey(KeyList, ValList, 'torder.minmax', [0,1]); 
    tcp_minmax      = GetValueByKey(KeyList, ValList, 'tcp.minmax',    [0,10]); 
-   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  10); 
+   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',     []); 
+   
+   ocp             = GetValueByKey(KeyList, ValList, 'ocp',  []); 
+   hasOutlierCmpnt = ~isempty(ocp);
    
    mcmc_seed       =GetValueByKey(KeyList, ValList, 'mcmc.seed',  0);         
    mcmc_samples    =GetValueByKey(KeyList, ValList, 'mcmc.samples',  8000);
@@ -182,8 +254,10 @@ function out = beast(y, varargin)
    mcmc_burnin     =GetValueByKey(KeyList, ValList, 'mcmc.burnin',  200);
    mcmc_chainNumber=GetValueByKey(KeyList, ValList, 'mcmc.chains',   3);  
    
+   ci               =GetValueByKey(KeyList, ValList, 'ci',   false);   
    printProgressBar =GetValueByKey(KeyList, ValList, 'print.progress',  true);     
-   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);           
+   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);      
+   gui              = GetValueByKey(KeyList, ValList, 'gui',  false); 
 %% Convert the opt parameters to the individual option parameters (e.g.,
 %  metadata, prior, mcmc, and extra)
 
@@ -193,24 +267,23 @@ function out = beast(y, varargin)
    metadata.season           = season;
    metadata.startTime        = start;
    metadata.deltaTime        = deltat;
-   if ~strcmp(metadata.season, 'none')
-       if (isempty(freq))
-        metadata.period       = [] ;  
-       else
-         metadata.period =freq *metadata.deltaTime;
-       end
-   end
+   if isempty(period) && ~isempty(deltat) && ~isempty(num_samples_per_period) && ~strcmp(season, 'none')
+       period=num_samples_per_period*deltat;
+   end   
+   metadata.period           = period;
+   metadata.time             = time;
+ 
    if strcmp(metadata.season, 'svd')
-       if isempty(freq)|| freq <= 1.1 || isnan(freq)
-           error("When season=svd, freq must be specified and larger than 1.");
-       end
-       metadata.svdTerms = svdbasis(y, freq, deseasonalize);
+      % if isempty(freq)|| freq <= 1.1 || isnan(freq)
+      %     error("When season=svd, freq must be specified and larger than 1.");
+      % end
+      % metadata.svdTerms = svdbasis(y, freq, deseasonalize);
    end
    metadata.missingValue     = NaN;
    metadata.maxMissingRate   = 0.75;
    metadata.deseasonalize    = deseasonalize;
    metadata.detrend          = detrend;
-   metadata.hasOutlierCmpnt  = 0;
+   metadata.hasOutlierCmpnt  = hasOutlierCmpnt;
 %........End of displaying MetaData ........
 
 %......Start of displaying 'prior' ......
@@ -228,15 +301,17 @@ function out = beast(y, varargin)
    prior.trendMinKnotNum  = tcp_minmax(1);
    prior.trendMaxKnotNum  = tcp_minmax(2);
    prior.trendMinSepDist  = tseg_min;
-      
+   
+   prior.outlierMaxKnotNum=ocp;
+        
    prior.precValue        = 1.500000;
-   prior.precPriorType    = 'uniform';
+   prior.precPriorType    = 'componentwise';
 %......End of displaying pripr ......
 
 %......Start of displaying 'mcmc' ......
    mcmc = [];
    mcmc.seed                      = mcmc_seed;
-   mcmc.samples                   =  mcmc_samples;
+   mcmc.samples                   = mcmc_samples;
    mcmc.thinningFactor            = mcmc_thin;
    mcmc.burnin                    = mcmc_burnin;
    mcmc.chainNumber               = mcmc_chainNumber;
@@ -251,13 +326,13 @@ function out = beast(y, varargin)
    extra = [];
    extra.dumpInputData        = true;
    extra.whichOutputDimIsTime = 1;
-   extra.computeCredible      = true;
+   extra.computeCredible      = ci;
    extra.fastCIComputation    = true;
    extra.computeSeasonOrder   = true;
    extra.computeTrendOrder    = true;
    extra.computeSeasonChngpt  = true;
    extra.computeTrendChngpt   = true;
-   extra.computeSeasonAmp     = true;
+   extra.computeSeasonAmp     = ~strcmp(metadata.season, 'svd');
    extra.computeTrendSlope    = true;
    extra.tallyPosNegSeasonJump= false;
    extra.tallyPosNegTrendJump = false;
@@ -269,7 +344,11 @@ function out = beast(y, varargin)
    extra.numParThreads        = 0;
 %......End of displaying extra ......
 %%
-  out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ if (gui)
+    out=Rbeast('beastv4demo',y,metadata, prior,mcmc, extra);
+ else
+    out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ end
 end
 
 
@@ -283,186 +362,7 @@ function value=GetValueByKey(KeyList, ValList, key,defaultValue)
    end
 end
 
-%% Geth SVD-based basis vector
-function U=svdbasis(x, p , residual)
-
-x  = x(:);
-n  = length(x);
-
-goodidx = find(~isnan(x));
-ngood   = length(goodidx);
  
-if(n==ngood)
-    SSS=getseason_polyfit(x,p,residual) ;
-else
-    SSS=getseason_polyfit_bad(x,p,goodidx,residual);
-end
-
-
-M    =  floor(n/p);
-SSS  = reshape(SSS(1:(M*p)), p,M);
-[u, s,v] = svd(SSS);    
-
-U     = zeros(n,p);
-M1    = floor((n+(p-1))/p);
-for i=1:p
-    ui=u(:,i);
-    ui=(ui-mean(ui))/std(ui);
-    ucol=repmat(ui,M1);    
-    U(:,i)=ucol(1:n);
-end
-end
-
-%%
-function beta=getbeta(X,Y)
-  XtX=X'*X;
-  XtY=X'*Y;
-  beta=linsolve(XtX,XtY);
-end
-
-function SSS=getseason_polyfit (x, p, residual)
-
-%%
-n  = length(x);
-p1 = floor(p/2);
-p2 = p-p1-1;
-
-maxTrendOder = 7;
-t            = (1:n)';
-XXX          = zeros(n, p1*2+1+maxTrendOder);
-for i = 1:p1
-    ttt = 2*pi*i*t/p;
-    XXX(:,(i-1)*2+1)=sin(ttt);
-    XXX(:, i*2)     =cos(ttt);
-end
-
-t             = t/n;
-t             =zscore(t);
-XXX(:,p1*2+1) = 1;
-y             = x(:);
-%%
-bestAIC  =1e300;
-bestOrder=0;
-for  order = 1:maxTrendOder 
-    xdim        = p1*2+1+order;
-    XXX(:, xdim)=t.^order;
-    beta        = getbeta(XXX(:,1:xdim), y);%XXX(:,1:xdim)\y;
-    yfit        = XXX(:,1:xdim)* beta;
-    res         = y-yfit;
-    newAIC      = n*log(sum(res.*res))+2*(order+1);
-    
-    if (newAIC > bestAIC+2)
-        break
-    else
-        if (newAIC < bestAIC)
-            bestAIC   =newAIC;
-            bestOrder=order;
-        end
-        
-    end
-end % for  order = 1:maxTrendOder
-%%
- 
-XXX     = XXX(:, 1:(p1*2+bestOrder+1) );
-beta    = getbeta(XXX,y);%XXX\y;
-trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-season = y-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-
-end
-
-function SSS=getseason_polyfit_bad(x, p, goodIdx, residual)
-
-ngood=sum(goodIdx);
-%%
-n  = length(x);
-p1 = round(p/2);
-p2 = p-p1-1;
-
-maxTrendOder = 7;
-t            = (1:n)';
-XXX          = zeros(n, p1*2+1+maxTrendOder);
-for i = 1:p1
-    ttt = 2*pi*i*t/p;
-    XXX(:,(i-1)*2+1)=sin(ttt);
-    XXX(:, i*2)     =cos(ttt);
-end
-
-t             =  t/n;
-XXX(:,p1*2+1) = 1;
-y             = x(:);
-%%
-bestAIC  =1e300;
-bestOrder=0;
-for  order = 1:maxTrendOder
-    xdim       = p1*2+1+order;
-    XXX(:, xdim)=t.^order;
-    beta       = getbeta( XXX(goodIdx,1:xdim),  y(goodIdx) );%XXX(goodIdx,1:xdim)\y(goodIdx);
-    yfit       = XXX(goodIdx,1:xdim)* beta;
-    res        = y(goodIdx)-yfit;
-    newAIC     = ngood*log(sum(res.*res))+2*(order+1);
-    
-    if (newAIC > bestAIC+2)
-        break;
-    else
-        if (newAIC < bestAIC)
-            bestAIC   =newAIC;
-            bestOrder=order;
-        end
-        
-    end
-end % for  order = 1:maxTrendOder
-
-XXX     = XXX(:,1:(p1*2+bestOrder+1));
-beta    = getbeta(XXX(goodIdx,:),y(goodIdx));% XXX(goodIdx,:)\y(goodIdx);
-trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-season = y-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-
-
-XXX            = XXX(:, 1:(p1*2+bestOrder+1) );
-beta           = XXX(goodIdx,:)\y(goodIdx);
-trend          = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-yfull          = XXX*beta;
-yfull(goodIdx) = y(goodIdx);
-
-season = yfull-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-end
-
 
 
 

@@ -2,9 +2,9 @@ function out = beast_irreg(y, varargin)
 % 
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast_irreg' to see the following
-%   USAGE: out=<strong>beast_irreg(y, ...) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%   USAGE: out=<strong>beast_irreg(y, ...) </strong>
 %
 %   <strong>y</strong>:  iregular time series; it should be a numeric vector. For reggular 
 %   time series, use 'beast' or 'beast123' instead. For multiple time series 
@@ -29,9 +29,22 @@ function out = beast_irreg(y, varargin)
 %        for monthly time series if the time unit is year). 'deltat' is
 %        used to aggregate the unevely input into regular time seires
 %        spaced by delta.
-%   <strong>freq</strong>:  
-%        the number of datapoints per period if peridodic  variations are 
-%        present in the data
+%        Note: why 'deltat' is needed for irregular time series:
+%        internally, BEAST is implemented to handle only evenly-spaced data
+%        for the sake of faster computation. So BEAST will aggregate it
+%        into regular data at the specified interval of 'deltat' before
+%        fitting the BEAST model. In the aggregration, data gaps/missing
+%        values are possible, which is of no issue because BEAST can handle
+%        missing values.
+%   <strong>freq</strong>:  Deprecated. Replaced with 'period'. See below
+%   <strong>period</strong>:  
+%        a numeric value to specify the period if peridodic/seasonal variations 
+%        are present in the data. If period is given a zero, negative value or 'none' 
+%        it suggests no seasonal/periodic component in the signal. (season='none'
+%        also suggests no periodic component).
+%        Note: in earlier versions, 'freq' was used to specify the period and
+%        now deprecated in this version. The unit of 'period', if any
+%        should be consistent with the unit of 'deltat'.
 %   <strong>season</strong>: 
 %        a string specifier. Possible values - 'none':  trend-only data with no 
 %        seasonality; 'harmonic': the seasonal/peridoic  component modelled via 
@@ -55,16 +68,14 @@ function out = beast_irreg(y, varargin)
 %        polynomials used to model the trend
 %   <strong>tseg.min</strong>: 
 %        an integer; the min length of the segment for the trend component (i.e.,
-%        the min distance between neighorbing changepoints)
-%
+%        the min distance between neighorbing changepoints)%
 %   <strong>deseasonalize</strong>: 
 %        boolean; if true, the input time series will be first
 %        de-seasonalized before applying BEAST by removing a global seasonal 
 %        component
 %   <strong>detrend</strong>: 
 %        boolean; if true, the input time series will be first
-%        de-trend before applying BEAST by removing a global trend 
-%
+%        de-trend before applying BEAST by removing a global trend %
 %   <strong>mcmc.seed</strong>: 
 %        a seed for the random number generator; set it to a non-zero
 %        integer to reproduce the results among different runs
@@ -75,21 +86,22 @@ function out = beast_irreg(y, varargin)
 %   <strong>mcmc.burnin</strong>: 
 %        the number of initial samples of each chain to be discarded
 %   <strong>mcmc.chains</strong>: 
-%        the number of MCMC chains
-%
+%        the number of MCMC chains%
 %   <strong>print.progress</strong>: 
 %        boolean; if true, a progress bar is shown
-%   <strong>print.options</strong>: 
-%        boolean; if true, print the BEAST paramers. The keywords for beast() 
-%        are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
+%   <strong>gui</strong>: 
+%       boolean; if true, show a gui to demostrate the MCMC sampling; runs only 
+%       on Windows not Linux or MacOS
+%
+%   The keywords for beast() are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
 %        in the beast123() interface. Some examples are:
 %            deseasonalize <-> metadata.deseasonalize
-%            scp.minmax(1) <-> prior.minSeasonKnotNumber
-%            scp.minmax(1) <-> prior.maxSeasonKnotNumber
-%            sseg.min      <-> prior.minSeasonSepDist
+%            scp.minmax(1) <-> prior.seasonMinOrder
+%            scp.minmax(2) <-> prior.seasonMaxOrder
+%            sseg.min      <-> prior.seasonMinSepDist
 %            mcmc.seed     <-> mcmc.seed
-%            scp.minmax(1) <-> prior.maxSeasonKnotNumber
-%       <strong> Experts should use the the beast123 function.</strong>
+%            tcp.minmax(1) <-> prior.trendMinKnotNumber
+%   <strong>Experts should use the the beast123 function.</strong>
 %   
 %   <strong>Note</strong>:
 %       beast, beast_irreg, and beast123 calls the same library
@@ -126,10 +138,11 @@ function out = beast_irreg(y, varargin)
 %       season.ampSD   : standard ev of the estiamated amplitude
 %
 %   <strong>More help</strong>:  
-%      The terse doc sucks (I know); so far, the best details are still the
+%      This terse help doc sucks (I know); so far, the best details are still the
 %      R help doc, available at https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf.
-%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's beast(freq=1) 
-%      beast('freq',1).
+%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's 
+%      beast(Y,<strong>start</strong>=1987,<strong>freq</strong>=1) is beast(Y,<strong>'start'</strong>, 1987, <strong>'freq'</strong>,1).
+%      
 %      
 %   <strong>Examples</strong>:
 %
@@ -138,10 +151,31 @@ function out = beast_irreg(y, varargin)
 %       y    = ohio.ndvi
 %       time = ohio.time
 %       plot(time,y,'o')
-%       o=beast_irreg(y, 'time',time,'deltat', 1/12, 'freq',12)
+%       % time is in the unit of fractional/decimal year
+%       o    = beast_irreg(y, 'time',time,'deltat', 1/12, 'period',1.0)
 %       printbeast(o)
 %       plotbeast(o)
-%       plotbeast(o,'ncpStat','median')
+%
+%       
+%       o = beast_irreg(y, 'time',ohio.datestr1) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr2) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr3) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr4) %parse date strings automatically
+% 
+%       time        = []                % an emepty object to stuff new attribute fields
+%       time.year   = ohio.Y
+%       time.month  = ohio.M
+%       time.day    = ohio.D
+%       o = beast_irreg(y, 'time', time) % provide numeric vectors of year, month, and days
+%
+%       time          = []             % an emepty object to stuff new attribute fields
+%       time.datestr  = ohio.datestr1
+%       time.strfmt   = '????yyyy?mm?dd'
+%       o=beast_irreg(y, 'time', time) % specify the pattern of data strings
+%       
+%
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
 %
 %   See also beast123, beast, printbeast, plotbeast, extractbeast
 
@@ -164,11 +198,13 @@ function out = beast_irreg(y, varargin)
    % get values from keys. The last arg is the default value if the key is
    % missing from varagin/KeyList
   
-   time  = GetValueByKey(KeyList, ValList, 'time',  []);
-   deltat = GetValueByKey(KeyList, ValList, 'deltat',  1);
-   freq   = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   time     = GetValueByKey(KeyList, ValList, 'time',   []);   
+   start     = GetValueByKey(KeyList, ValList, 'start', []);
+   deltat   = GetValueByKey(KeyList, ValList, 'deltat', []);
+   num_samples_per_period  = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   period   = GetValueByKey(KeyList, ValList, 'period',  []); 
    
-   season          = GetValueByKey(KeyList, ValList, 'season','harmonic');
+   season          = GetValueByKey(KeyList, ValList, 'season',[]); %'harmonic'
    sorder_minmax   = GetValueByKey(KeyList, ValList, 'sorder.minmax', [1,5]); 
    scp_minmax      = GetValueByKey(KeyList, ValList, 'scp.minmax',    [0,10]); 
    sseg_min        = GetValueByKey(KeyList, ValList, 'sseg.min',      []); 
@@ -178,7 +214,10 @@ function out = beast_irreg(y, varargin)
    
    torder_minmax   = GetValueByKey(KeyList, ValList, 'torder.minmax', [0,1]); 
    tcp_minmax      = GetValueByKey(KeyList, ValList, 'tcp.minmax',    [0,10]); 
-   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  10); 
+   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  []); 
+
+   ocp             = GetValueByKey(KeyList, ValList, 'ocp',  []); 
+   hasOutlierCmpnt = ~isempty(ocp);
    
    mcmc_seed       =GetValueByKey(KeyList, ValList, 'mcmc.seed',  0);         
    mcmc_samples    =GetValueByKey(KeyList, ValList, 'mcmc.samples',  8000);
@@ -186,29 +225,34 @@ function out = beast_irreg(y, varargin)
    mcmc_burnin     =GetValueByKey(KeyList, ValList, 'mcmc.burnin',  200);
    mcmc_chainNumber=GetValueByKey(KeyList, ValList, 'mcmc.chains',   3);  
    
+   ci               =GetValueByKey(KeyList, ValList, 'ci',   false);   
+      
    printProgressBar =GetValueByKey(KeyList, ValList, 'print.progress',  true);     
-   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);           
+   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);       
+   gui              = GetValueByKey(KeyList, ValList, 'gui',  false); 
 %% Convert the opt parameters to the individual option parameters (e.g.,
 %  metadata, prior, mcmc, and extra)
 
    %......Start of displaying 'MetaData' ......
    metadata = [];
-   metadata.isRegularOrdered = false;
+   %metadata.isRegularOrdered = false;
    metadata.season           = season;
-   metadata.time            = time;
+   if strcmp(metadata.season, 'svd')
+    % warning("season=svd is supported only for regular time series in beast()! 'harmonic' is used instead.");
+	% metadata.season  = 'harmonic';
+   end
+   metadata.time             = time;
+   metadata.startTime        = start;
    metadata.deltaTime        = deltat;
-   if ~strcmp(metadata.season, 'none')
-       if (isempty(freq))
-        metadata.period       = [] ;  
-       else
-         metadata.period =freq *metadata.deltaTime;
-       end
+   if isempty(period) && ~isempty(deltat) && ~isempty(num_samples_per_period) && ~strcmp(season, 'none')
+       period=num_samples_per_period*deltat;
    end   
+   metadata.period           = period;  
    metadata.missingValue     = NaN;
    metadata.maxMissingRate   = 0.75;
    metadata.deseasonalize    = deseasonalize;
    metadata.detrend          = detrend;
-   metadata.hasOutlierCmpnt  = 0;
+   metadata.hasOutlierCmpnt  = hasOutlierCmpnt;
 %........End of displaying MetaData ........
 
 %......Start of displaying 'prior' ......
@@ -226,15 +270,17 @@ function out = beast_irreg(y, varargin)
    prior.trendMinKnotNum  = tcp_minmax(1);
    prior.trendMaxKnotNum  = tcp_minmax(2);
    prior.trendMinSepDist  = tseg_min;
-      
+
+   prior.outlierMaxKnotNum=ocp;
+   
    prior.precValue        = 1.500000;
-   prior.precPriorType    = 'uniform';
+   prior.precPriorType    = 'componentwise';
 %......End of displaying pripr ......
 
 %......Start of displaying 'mcmc' ......
    mcmc = [];
    mcmc.seed                      = mcmc_seed;
-   mcmc.samples                   =  mcmc_samples;
+   mcmc.samples                   = mcmc_samples;
    mcmc.thinningFactor            = mcmc_thin;
    mcmc.burnin                    = mcmc_burnin;
    mcmc.chainNumber               = mcmc_chainNumber;
@@ -249,7 +295,7 @@ function out = beast_irreg(y, varargin)
    extra = [];
    extra.dumpInputData        = true;
    extra.whichOutputDimIsTime = 1;
-   extra.computeCredible      = true;
+   extra.computeCredible      = ci;
    extra.fastCIComputation    = true;
    extra.computeSeasonOrder   = true;
    extra.computeTrendOrder    = true;
@@ -267,7 +313,12 @@ function out = beast_irreg(y, varargin)
    extra.numParThreads        = 0;
 %......End of displaying extra ......
 %%
-  out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ if (gui)
+    out=Rbeast('beastv4demo',y,metadata, prior,mcmc, extra);
+ else
+    out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ end
+ 
 end
 
 
